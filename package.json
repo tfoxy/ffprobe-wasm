@@ -1,0 +1,27 @@
+{
+  "name": "ffprobe-wasm",
+  "version": "0.1.0",
+  "description": "ffprobe-like for browser and node, powered by WebAssembly",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tfoxy/ffprobe-wasm"
+  },
+  "bugs": {
+    "url": "https://github.com/tfoxy/ffprobe-wasm/issues"
+  },
+  "keywords": [
+    "ffprobe",
+    "WebAssembly",
+    "ffmpeg",
+    "video"
+  ],
+  "author": "Tomás Fox <tomas.c.fox@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.21",
+    "typescript": "^4.5.5"
+  }
+}

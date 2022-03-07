@@ -1,0 +1,3 @@
+[submodule "ffprobe-wasm-app"]
+	path = ffprobe-wasm-app
+	url = https://github.com/alfg/ffprobe-wasm
