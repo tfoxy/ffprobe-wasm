@@ -18,5 +18,5 @@ cp src/*.d.* dist
 # Build browser/node workers
 npm run build
 
-# Copy package.json
-cp package.json dist
+# Copy files for npm publish
+cp package.json LICENSE README.md dist
