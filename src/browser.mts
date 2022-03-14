@@ -1,4 +1,13 @@
-import type { Chapter, ChapterTag, FileInfo, Frame, FramesInfo, Stream } from "./ffprobe-wasm.mjs";
+import type {
+  Chapter,
+  ChapterTag,
+  FileInfo,
+  Frame,
+  FramesInfo,
+  Stream,
+} from "./ffprobe-wasm.mjs";
+import { getCurrentScriptLocation } from "./utils.mjs";
+import type { BrowserIncomingMessage } from "./worker-browser.mjs";
 import type {
   IncomingMessage,
   IncomingData,
@@ -9,15 +18,30 @@ export class FFprobeWorker {
   readonly #worker: Worker;
 
   constructor() {
-    this.#worker = new Worker("./worker-browser.mjs");
+    const scriptLocation = getCurrentScriptLocation();
+    this.#worker = new Worker(`${scriptLocation ?? "."}/worker-browser.mjs`, {
+      type: "module",
+    });
+    if (scriptLocation) {
+      this.#worker.postMessage({
+        type: "options",
+        payload: { scriptLocation },
+      } as BrowserIncomingMessage);
+    }
   }
 
   async getFileInfo(file: File): Promise<FileInfo> {
-    return this.#postMessage({ type: "getFileInfo", payload: [file.name, { files: [file] }] });
+    return this.#postMessage({
+      type: "getFileInfo",
+      payload: [file.name, { files: [file] }],
+    });
   }
 
   async getFrames(file: File, offset: number): Promise<FramesInfo> {
-    return this.#postMessage({ type: "getFrames", payload: [file.name, { files: [file] }, offset] });
+    return this.#postMessage({
+      type: "getFrames",
+      payload: [file.name, { files: [file] }, offset],
+    });
   }
 
   terminate(): void {
@@ -28,7 +52,7 @@ export class FFprobeWorker {
     const channel = new MessageChannel();
     const message: IncomingMessage = {
       ...data,
-      port: channel.port2
+      port: channel.port2,
     };
 
     this.#worker.postMessage(message, [channel.port2]);
@@ -41,7 +65,7 @@ export class FFprobeWorker {
         } else {
           reject(new Error(data.message));
         }
-      }
+      };
     });
   }
 }
