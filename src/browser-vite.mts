@@ -1,34 +1,59 @@
-import type { Chapter, ChapterTag, FileInfo, Frame, FramesInfo, Stream } from "./ffprobe-wasm.mjs";
+import type {
+  Chapter,
+  ChapterTag,
+  FileInfo,
+  Frame,
+  FramesInfo,
+  Stream,
+} from "./ffprobe-wasm.mjs";
+import type { FFprobeWorker as AbstractFFprobeWorker } from "./ffprobe-worker.js";
+import BrowserWorker from "./worker-browser.mjs?worker&inline";
 import type {
   IncomingMessage,
   IncomingData,
   OutgoingMessage,
 } from "./worker.mjs";
 
-export class FFprobeWorker {
+export class FFprobeWorker implements AbstractFFprobeWorker {
   readonly #worker: Worker;
 
   constructor() {
-    this.#worker = new Worker("./worker-browser.mjs");
+    this.#worker = new BrowserWorker();
   }
 
   async getFileInfo(file: File): Promise<FileInfo> {
-    return this.#postMessage({ type: "getFileInfo", payload: [file.name, { files: [file] }] });
+    this.#validateFile(file);
+    return this.#postMessage({
+      type: "getFileInfo",
+      payload: [file.name, { files: [file] }],
+    });
   }
 
   async getFrames(file: File, offset: number): Promise<FramesInfo> {
-    return this.#postMessage({ type: "getFrames", payload: [file.name, { files: [file] }, offset] });
+    this.#validateFile(file);
+    return this.#postMessage({
+      type: "getFrames",
+      payload: [file.name, { files: [file] }, offset],
+    });
   }
 
   terminate(): void {
     this.#worker.terminate();
   }
 
+  #validateFile(file: File | string): asserts file is File {
+    if (typeof file === "string") {
+      throw new Error(
+        "String only supported in Node.js, you must provide a File"
+      );
+    }
+  }
+
   #postMessage(data: IncomingData): Promise<any> {
     const channel = new MessageChannel();
     const message: IncomingMessage = {
       ...data,
-      port: channel.port2
+      port: channel.port2,
     };
 
     this.#worker.postMessage(message, [channel.port2]);
@@ -41,7 +66,7 @@ export class FFprobeWorker {
         } else {
           reject(new Error(data.message));
         }
-      }
+      };
     });
   }
 }

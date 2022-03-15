@@ -1,14 +1,22 @@
 import { basename, dirname } from "path";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 import { MessageChannel, Worker } from "worker_threads";
-import type { Chapter, ChapterTag, FileInfo, Frame, FramesInfo, Stream } from "./ffprobe-wasm.mjs";
+import type {
+  Chapter,
+  ChapterTag,
+  FileInfo,
+  Frame,
+  FramesInfo,
+  Stream,
+} from "./ffprobe-wasm.js";
+import type { FFprobeWorker as AbstractFFprobeWorker } from "./ffprobe-worker.js";
 import type {
   IncomingMessage,
   IncomingData,
   OutgoingMessage,
 } from "./worker.mjs";
 
-export class FFprobeWorker {
+export class FFprobeWorker implements AbstractFFprobeWorker {
   readonly #worker: Worker;
 
   constructor() {
@@ -17,22 +25,38 @@ export class FFprobeWorker {
   }
 
   async getFileInfo(filePath: string): Promise<FileInfo> {
-    return this.#postMessage({ type: "getFileInfo", payload: [basename(filePath), { root: dirname(filePath) }] });
+    this.#validateFile(filePath);
+    return this.#postMessage({
+      type: "getFileInfo",
+      payload: [basename(filePath), { root: dirname(filePath) }],
+    });
   }
 
   async getFrames(filePath: string, offset: number): Promise<FramesInfo> {
-    return this.#postMessage({ type: "getFrames", payload: [basename(filePath), { root: dirname(filePath) }, offset] });
+    this.#validateFile(filePath);
+    return this.#postMessage({
+      type: "getFrames",
+      payload: [basename(filePath), { root: dirname(filePath) }, offset],
+    });
   }
 
   terminate(): void {
     this.#worker.terminate();
   }
 
+  #validateFile(filePath: string | File): asserts filePath is string {
+    if (typeof filePath === "object") {
+      throw new Error(
+        "File object only supported in Browser, you must provide a string (path)"
+      );
+    }
+  }
+
   #postMessage(data: IncomingData): Promise<any> {
     const channel = new MessageChannel();
     const message: IncomingMessage = {
       ...data,
-      port: channel.port2
+      port: channel.port2,
     };
 
     this.#worker.postMessage(message, [channel.port2]);
