@@ -1,12 +1,14 @@
+import type { FFprobeWorker as AbstractFFprobeWorker } from "./ffprobe-worker.mjs";
 import type {
   Chapter,
-  ChapterTag,
+  Disposition,
   FileInfo,
+  Format,
   Frame,
   FramesInfo,
+  Rational,
   Stream,
-} from "./ffprobe-wasm.mjs";
-import type { FFprobeWorker as AbstractFFprobeWorker } from "./ffprobe-worker.js";
+} from "./types.mjs";
 import BrowserWorker from "./worker-browser.mjs?worker&inline";
 import type {
   IncomingMessage,
@@ -23,10 +25,13 @@ export class FFprobeWorker implements AbstractFFprobeWorker {
 
   async getFileInfo(file: File): Promise<FileInfo> {
     this.#validateFile(file);
-    return this.#postMessage({
+    const fileInfo: FileInfo = await this.#postMessage({
       type: "getFileInfo",
       payload: [file.name, { files: [file] }],
     });
+    fileInfo.format.filename = file.name;
+    fileInfo.format.size = file.size.toString();
+    return fileInfo;
   }
 
   async getFrames(file: File, offset: number): Promise<FramesInfo> {
@@ -44,7 +49,7 @@ export class FFprobeWorker implements AbstractFFprobeWorker {
   #validateFile(file: File | string): asserts file is File {
     if (typeof file === "string") {
       throw new Error(
-        "String only supported in Node.js, you must provide a File"
+        "String only supported in Node.js, you must provide a File",
       );
     }
   }
@@ -71,4 +76,13 @@ export class FFprobeWorker implements AbstractFFprobeWorker {
   }
 }
 
-export type { Chapter, ChapterTag, FileInfo, Frame, FramesInfo, Stream };
+export type {
+  Chapter,
+  Disposition,
+  FileInfo,
+  Format,
+  Frame,
+  FramesInfo,
+  Rational,
+  Stream,
+};

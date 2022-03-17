@@ -1,6 +1,6 @@
-import { FFprobe } from "./ffprobe-wasm-shared";
+import { FFprobe } from "./ffprobe-wasm-shared.mjs";
 
-export * from "./ffprobe-wasm-shared";
+export * from "./ffprobe-wasm-shared.mjs";
 
 declare const ffprobe: FFprobe;
 

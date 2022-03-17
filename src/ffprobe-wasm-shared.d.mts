@@ -1,3 +1,5 @@
+import { FileInfo, FramesInfo } from "./types.mjs";
+
 export interface FFprobe {
   get_file_info(path: string): Raw<FileInfo>;
   get_frames(path: string, offset: number): Raw<FramesInfo>;
@@ -69,22 +71,7 @@ export interface AnalyzePathReturn {
   parentObject: any | null;
 }
 
-export interface FileInfo {
-  bit_rate: number;
-  chapters: Chapter[];
-  /**
-   * Duration in microseconds
-   */
-  duration: number;
-  flags: number;
-  name: string;
-  nb_chapters: number;
-  nb_streams: number;
-  streams: Stream[];
-  url: string;
-}
-
-export interface Collection<T> {
+export interface Vector<T> {
   count: { value: number };
   ptr: number;
   ptrType: any;
@@ -92,57 +79,17 @@ export interface Collection<T> {
   size(): number;
 }
 
-export type Raw<T> = {
-  [K in keyof T]: T[K] extends Array<infer U> ? Collection<Raw<U>> : T[K];
-};
-
-export interface Chapter {
-  end: number;
-  id: number;
-  start: number;
-  tags: ChapterTag[];
-  /**
-   * @example "1/1000"
-   */
-  time_base: string;
-}
-
-export interface ChapterTag {
+export interface DictionaryEntry {
   key: string;
   value: string;
 }
 
-export interface Stream {
-  bit_rate: number;
-  channels: number;
-  codec_name: string;
-  codec_type: number;
-  duration: number;
-  format: string;
-  frame_size: number;
-  height: number;
-  id: number;
-  level: number;
-  profile: string;
-  sample_rate: number;
-  start_time: number;
-  width: number;
-}
-
-export interface FramesInfo {
-  avg_frame_rate: number;
-  duration: number;
-  frames: Frame[];
-  gop_size: number;
-  nb_frames: number;
-  time_base: number;
-}
-
-export interface Frame {
-  dts: number;
-  frame_number: number;
-  pict_type: number;
-  pkt_size: number;
-  pos: number;
-  pts: number;
-}
+export type Raw<T> = {
+  [K in keyof T]: T[K] extends Array<infer U>
+    ? Vector<Raw<U>>
+    : T[K] extends Record<string, string>
+    ? Vector<DictionaryEntry>
+    : T[K] extends string | number | boolean | undefined | null
+    ? T[K]
+    : Raw<T[K]>;
+};

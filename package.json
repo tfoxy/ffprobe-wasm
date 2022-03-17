@@ -1,6 +1,6 @@
 {
   "name": "ffprobe-wasm",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "ffprobe-like for browser and node, powered by WebAssembly",
   "repository": {
     "type": "git",
@@ -19,11 +19,11 @@
   "license": "MIT",
   "exports": {
     "node": "./node.mjs",
-    "types": "./ffprobe-worker.d.ts",
+    "types": "./ffprobe-worker.d.mts",
     "default": "./browser.mjs"
   },
   "main": "./node.mjs",
-  "types": "./ffprobe-worker.d.ts",
+  "types": "./ffprobe-worker.d.mts",
   "browser": "./browser.mjs",
   "scripts": {
     "build": "npm run tsc && npm run vite",

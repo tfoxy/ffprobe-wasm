@@ -1,7 +1,17 @@
 import type { MessagePort as NodeMessagePort } from "worker_threads";
-import type { Chapter, ChapterTag, FFprobe, FileInfo, FramesInfo, FSFilesystems, FSMountOptions, Stream } from "./ffprobe-wasm-shared";
+import type {
+  DictionaryEntry,
+  FFprobe,
+  FSFilesystems,
+  FSMountOptions,
+  Raw,
+  Vector,
+} from "./ffprobe-wasm-shared.mjs";
+import { FileInfo, FramesInfo, Stream } from "./types.mjs";
 
-export type IncomingMessage = { port: MessagePort | NodeMessagePort } & IncomingData;
+export type IncomingMessage = {
+  port: MessagePort | NodeMessagePort;
+} & IncomingData;
 
 export type IncomingData =
   | {
@@ -63,7 +73,33 @@ export function createListener(
     }
   }
 
-  async function getFileInfo(fileName: string, mountOptions: FSMountOptions): Promise<FileInfo> {
+  function vectorToArray<T>(vector: Vector<T>): T[] {
+    const array: T[] = [];
+    for (let i = 0; i < vector.size(); i++) {
+      array.push(vector.get(i));
+    }
+    return array;
+  }
+
+  function dictionaryVectorToRecord(
+    vector: Vector<DictionaryEntry>,
+  ): Record<string, string> {
+    return Object.fromEntries(
+      vectorToArray(vector).map(({ key, value }) => [key, value]),
+    );
+  }
+
+  function serializeStreams(streams: Vector<Raw<Stream>>) {
+    return vectorToArray(streams).map((stream) => ({
+      ...stream,
+      tags: dictionaryVectorToRecord(stream.tags),
+    }));
+  }
+
+  async function getFileInfo(
+    fileName: string,
+    mountOptions: FSMountOptions,
+  ): Promise<FileInfo> {
     const { FS, get_file_info } = await ffprobePromise;
     try {
       if (!FS.analyzePath("/work").exists) {
@@ -71,32 +107,18 @@ export function createListener(
       }
       FS.mount(FS.filesystems[fsType], mountOptions, "/work");
 
-      // Call the wasm module.
       const rawInfo = get_file_info(`/work/${fileName}`);
 
-      // Remap streams into collection.
-      const streams: Stream[] = [];
-      for (let i = 0; i < rawInfo.streams.size(); i++) {
-        streams.push(rawInfo.streams.get(i));
-      }
-
-      // Remap chapters into collection.
-      const chapters: Chapter[] = [];
-      for (let i = 0; i < rawInfo.chapters.size(); i++) {
-        const rawChapter = rawInfo.chapters.get(i);
-
-        const tags: ChapterTag[] = [];
-        for (let j = 0; j < rawChapter.tags.size(); j++) {
-          tags.push(rawChapter.tags.get(j));
-        }
-
-        chapters.push({ ...rawChapter, tags });
-      }
-
       return {
-        ...rawInfo,
-        streams,
-        chapters,
+        streams: serializeStreams(rawInfo.streams),
+        chapters: vectorToArray(rawInfo.chapters).map((chapter) => ({
+          ...chapter,
+          tags: dictionaryVectorToRecord(chapter.tags),
+        })),
+        format: {
+          ...rawInfo.format,
+          tags: dictionaryVectorToRecord(rawInfo.format.tags),
+        },
       };
     } finally {
       // Cleanup mount.
@@ -104,7 +126,11 @@ export function createListener(
     }
   }
 
-  async function getFrames(fileName: string, mountOptions: FSMountOptions, offset: number): Promise<FramesInfo> {
+  async function getFrames(
+    fileName: string,
+    mountOptions: FSMountOptions,
+    offset: number,
+  ): Promise<FramesInfo> {
     const { FS, get_frames } = await ffprobePromise;
     try {
       if (!FS.analyzePath("/work").exists) {
@@ -112,18 +138,11 @@ export function createListener(
       }
       FS.mount(FS.filesystems.WORKERFS, mountOptions, "/work");
 
-      // Call the wasm module.
       const framesInfo = get_frames(`/work/${fileName}`, offset);
-
-      // Remap frames into collection.
-      const frames = [];
-      for (let i = 0; i < framesInfo.frames.size(); i++) {
-        frames.push(framesInfo.frames.get(i));
-      }
 
       return {
         ...framesInfo,
-        frames,
+        frames: vectorToArray(framesInfo.frames),
       };
     } finally {
       // Cleanup mount.

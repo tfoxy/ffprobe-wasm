@@ -1,15 +1,18 @@
+import { stat } from "fs/promises";
 import { basename, dirname } from "path";
 import { fileURLToPath } from "url";
 import { MessageChannel, Worker } from "worker_threads";
+import type { FFprobeWorker as AbstractFFprobeWorker } from "./ffprobe-worker.mjs";
 import type {
   Chapter,
-  ChapterTag,
+  Disposition,
   FileInfo,
+  Format,
   Frame,
   FramesInfo,
+  Rational,
   Stream,
-} from "./ffprobe-wasm.js";
-import type { FFprobeWorker as AbstractFFprobeWorker } from "./ffprobe-worker.js";
+} from "./types.mjs";
 import type {
   IncomingMessage,
   IncomingData,
@@ -26,10 +29,13 @@ export class FFprobeWorker implements AbstractFFprobeWorker {
 
   async getFileInfo(filePath: string): Promise<FileInfo> {
     this.#validateFile(filePath);
-    return this.#postMessage({
+    const fileInfo: FileInfo = await this.#postMessage({
       type: "getFileInfo",
       payload: [basename(filePath), { root: dirname(filePath) }],
     });
+    fileInfo.format.filename = filePath;
+    fileInfo.format.size = (await stat(filePath)).size.toString();
+    return fileInfo;
   }
 
   async getFrames(filePath: string, offset: number): Promise<FramesInfo> {
@@ -47,7 +53,7 @@ export class FFprobeWorker implements AbstractFFprobeWorker {
   #validateFile(filePath: string | File): asserts filePath is string {
     if (typeof filePath === "object") {
       throw new Error(
-        "File object only supported in Browser, you must provide a string (path)"
+        "File object only supported in Browser, you must provide a string (path)",
       );
     }
   }
@@ -73,4 +79,13 @@ export class FFprobeWorker implements AbstractFFprobeWorker {
   }
 }
 
-export type { Chapter, ChapterTag, FileInfo, Frame, FramesInfo, Stream };
+export type {
+  Chapter,
+  Disposition,
+  FileInfo,
+  Format,
+  Frame,
+  FramesInfo,
+  Rational,
+  Stream,
+};
